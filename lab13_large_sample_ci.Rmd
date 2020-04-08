@@ -1,0 +1,67 @@
+---
+title: "Lab 13: Large Sample CI"
+output:
+  pdf_document:
+    keep_tex: true
+header-includes:
+   - \usepackage{booktabs}
+geometry: margin=1.5cm
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Spatial Organization of Chromosome (Rice Problem 8.45)
+
+The R code below reads in the data and calculates the maximum likelihood estimate:
+
+```{r}
+library(readr)
+library(ggplot2)
+
+chromatin <- read_csv("http://www.evanlray.com/data/rice/Chapter%208/Chromatin/data05.txt",
+  col_names = FALSE)
+colnames(chromatin) <- "distance"
+
+theta_hat <- 1/(2 * nrow(chromatin)) * sum(chromatin$distance^2)
+theta_hat
+```
+
+#### 1. Find the variance of a large-sample normal approximation to the sampling distribution of the MLE based on the observed Fisher information.  (You should be able to calculate a number.)
+
+```{r}
+est_var_theta_hat_J <- 1 / (1/theta_hat^3 * sum(chromatin$distance^2) - nrow(chromatin) / theta_hat^2)
+est_var_theta_hat_J
+```
+
+#### 2. Find the variance of a large-sample normal approximation to the sampling distribution of the MLE based on the Fisher information.  (You should be able to calculate a number.)
+
+```{r}
+est_var_theta_hat_I <- theta_hat^2 / nrow(chromatin)
+est_var_theta_hat_I
+```
+
+#### 3. The plot below shows a representation of the pdf of the $\text{Rayleigh}(\theta)$ distribution based on the maximum likelihood estimate of $\theta$.  Add two more curves corresponding to the values of $\theta$ at the upper and lower end points of an approximate 95% confidence interval for $\theta$ based on the Fisher information from part 2.
+
+R does not come with a function to calculate the pdf of the Rayleigh distribution, so I have defined one below for you to use.
+
+```{r, fig.height = 3}
+drayleigh <- function(x, theta) {
+  log_value <- rep(-Inf, length(x))
+  inds <- which(x > 0)
+  
+  log_value[inds] <- log(x[inds]) - log(theta) - (x[inds]^2)/(2 * theta)
+  
+  return(exp(log_value))
+}
+
+
+
+
+ggplot(data = chromatin, mapping = aes(x = distance)) +
+  geom_histogram(binwidth = 0.5, mapping = aes(y = ..density..)) +
+  stat_function(fun = drayleigh, args = list(theta = theta_hat), color = "orange") +
+  stat_function(fun = drayleigh, args = list(theta = theta_hat - qnorm(0.025) * sqrt(est_var_theta_hat_I)), color = "cornflowerblue") +
+  stat_function(fun = drayleigh, args = list(theta = theta_hat - qnorm(0.975) * sqrt(est_var_theta_hat_I)), color = "purple")
+```
